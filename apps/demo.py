@@ -5,24 +5,36 @@ Created on Dec 20 17:39 2016
 
 @author: Denis Tome'
 """
+
+import __init__
+
+from lifting import PoseEstimator
+from lifting.utils import draw_limbs
+from lifting.utils import plot_pose
+
 import cv2
-from graph_functions import PoseEstimator
-from utils import draw_limbs
-from utils import plot_pose
 import matplotlib.pyplot as plt
 from os.path import dirname, realpath
 
+
 def main():
-    image_file_name = 'images/test_image.png'
-    image = cv2.imread(image_file_name)
+    dir_path = dirname(realpath(__file__))
+    project_path = realpath(dir_path + '/..')
+
+    print(project_path)
+
+    image_file_path = project_path + '/data/images/test_image.png'
+    image = cv2.imread(image_file_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # conversion to rgb
 
     # create pose estimator
+    saved_sessions_dir = project_path + '/data/saved_sessions'
+    session_path = saved_sessions_dir + '/init_session/init'
+    prob_model_path = saved_sessions_dir + '/prob_model/prob_model_params.mat'
+
     image_size = image.shape
-    session_dir = dirname(realpath(__file__))
-    session_path = session_dir + '/saved_sessions/init_session/init'
-    
-    pose_estimator = PoseEstimator(image_size, session_path)
+
+    pose_estimator = PoseEstimator(image_size, session_path, prob_model_path)
 
     # load model and run evaluation on image
     pose_estimator.initialise()
@@ -50,6 +62,7 @@ def display_results(in_image, data_2d, joint_visibility, data_3d):
         plot_pose(single_3D)
 
     plt.show()
+
 
 if __name__ == '__main__':
     import sys

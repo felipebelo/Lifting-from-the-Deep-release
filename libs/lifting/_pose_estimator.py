@@ -5,12 +5,17 @@ Created on Jul 13 16:20 2017
 @author: Denis Tome'
 """
 import cv2
-import utils
+from lifting import utils
 import numpy as np
 import tensorflow as tf
 
 import abc
 ABC = abc.ABCMeta('ABC', (object,), {})
+
+__all__ = [
+    'PoseEstimatorInterface',
+    'PoseEstimator'
+]
 
 
 class PoseEstimatorInterface(ABC):
@@ -30,13 +35,15 @@ class PoseEstimatorInterface(ABC):
 
 class PoseEstimator(PoseEstimatorInterface):
 
-    def __init__(self, image_size, session_path):
-        """Initialising the graph in tensorflow.
-        INPUT:
-            image_size: Size of the image in the format (w x h x 3)"""
+    def __init__(self, image_size, session_path, prob_model_path):
+        """
+        Initialising the graph in tensorflow.
+
+        INPUT: image_size: Size of the image in the format (w x h x 3)
+        """
 
         self.session = None
-        self.poseLifting = utils.Prob3dPose()
+        self.poseLifting = utils.Prob3dPose(prob_model_path)
         self.sess = -1
         self.orig_img_size = np.array(image_size)
         self.scale = utils.config.INPUT_SIZE / (self.orig_img_size[0] * 1.0)
@@ -50,11 +57,14 @@ class PoseEstimator(PoseEstimatorInterface):
         self.session_path = session_path
 
     def initialise(self):
-        """Load saved model in the graph
-        INPUT:
-            sess_path: path to the dir containing the tensorflow saved session
-        OUTPUT:
-            sess: tensorflow session"""
+        """
+        Load saved model in the graph
+
+        INPUT: sess_path: path to the dir containing the
+        tensorflow saved session
+
+        OUTPUT: sess: tensorflow session
+        """
 
         _N = 16
 
@@ -91,9 +101,11 @@ class PoseEstimator(PoseEstimatorInterface):
     def estimate(self, image):
         """
         Estimate 2d and 3d poses on the image.
+
         INPUT:
             image: RGB image in the format (w x h x 3)
             sess: tensorflow session
+
         OUTPUT:
             pose_2d: 2D pose for each of the people in the image in the format
             (num_ppl x num_joints x 2) visibility: vector containing a bool
@@ -126,13 +138,21 @@ class PoseEstimator(PoseEstimatorInterface):
         _hmap_pose = sess.run(self.heatmap_pose, feed_dict)
 
         # Estimate 2D poses
-        estimated_2d_pose, visibility = utils.detect_parts_heatmaps(
-            _hmap_pose, centers,
-            [utils.config.INPUT_SIZE, utils.config.INPUT_SIZE])
+        estimated_2d_pose, visibility = (
+            utils.detect_parts_heatmaps(
+                _hmap_pose, centers,
+                [
+                    utils.config.INPUT_SIZE,
+                    utils.config.INPUT_SIZE
+                ]
+            ))
 
         # Estimate 3D poses
-        transformed_pose2d, weights = self.poseLifting.transform_joints(
-            estimated_2d_pose.copy(), visibility)
+        transformed_pose2d, weights = (
+            self.poseLifting.transform_joints(
+                estimated_2d_pose.copy(), visibility)
+        )
+
         pose_3d = self.poseLifting.compute_3d(transformed_pose2d, weights)
         pose_2d = np.round(estimated_2d_pose / self.scale).astype(np.int32)
 

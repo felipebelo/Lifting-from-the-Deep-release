@@ -3,6 +3,7 @@
 *.so
 *.cpp
 
+build/
+
 # folders
 saved_sessions
-utils/external/build
