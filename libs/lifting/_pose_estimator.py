@@ -55,6 +55,7 @@ class PoseEstimator(PoseEstimatorInterface):
         self.pose_centermap_in = None
         self.heatmap_pose = None
         self.session_path = session_path
+        self._initialised = False
 
     def initialise(self):
         """
@@ -65,6 +66,8 @@ class PoseEstimator(PoseEstimatorInterface):
 
         OUTPUT: sess: tensorflow session
         """
+        if self._initialised:
+            return
 
         _N = 16
 
@@ -114,6 +117,8 @@ class PoseEstimator(PoseEstimatorInterface):
             image) pose_3d: 3D pose for each of the people in the image in the
             format (num_ppl x 3 x num_joints)
         """
+        if not self._initialised:
+            self.initialise()
 
         sess = self.session
 
