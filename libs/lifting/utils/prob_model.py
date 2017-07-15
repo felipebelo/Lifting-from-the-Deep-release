@@ -14,7 +14,8 @@ __all__ = ['Prob3dPose']
 
 class Prob3dPose:
 
-    def __init__(self, prob_model_path, cam_matrix=[]):
+    def __init__(self, prob_model_path):
+
         model_param = (
             sio.loadmat(prob_model_path)
         )
@@ -29,7 +30,7 @@ class Prob3dPose:
 
     @staticmethod
     def cost3d(model, gt):
-        "3d error in mm"
+        """3d error in mm"""
         out = np.sqrt(((gt - model) ** 2).sum(1)).mean(-1)
         return out
 

@@ -59,22 +59,22 @@ def plot_pose(pose):
         [9, 10], [8, 11], [11, 12], [12, 13], [8, 14], [14, 15], [15, 16]
     ]
 
-    def joint_color(j):
+    def joint_color(_j):
         colors = [
             (0, 0, 0), (255, 0, 255), (0, 0, 255),
             (0, 255, 255), (255, 0, 0), (0, 255, 0)
         ]
 
         _c = 0
-        if j in range(1, 4):
+        if _j in range(1, 4):
             _c = 1
-        if j in range(4, 7):
+        if _j in range(4, 7):
             _c = 2
-        if j in range(9, 11):
+        if _j in range(9, 11):
             _c = 3
-        if j in range(11, 14):
+        if _j in range(11, 14):
             _c = 4
-        if j in range(14, 17):
+        if _j in range(14, 17):
             _c = 5
         return colors[_c]
 

@@ -11,6 +11,7 @@ import __init__
 from lifting import PoseEstimator
 from lifting.utils import draw_limbs
 from lifting.utils import plot_pose
+from lifting.utils import config
 
 import cv2
 import matplotlib.pyplot as plt
@@ -34,13 +35,14 @@ def main():
 
     image_size = image.shape
 
-    pose_estimator = PoseEstimator(image_size, session_path, prob_model_path)
+    pose_estimator = PoseEstimator(
+        config, image_size, session_path, prob_model_path)
 
     # load model and run evaluation on image
     pose_estimator.initialise()
 
     # estimation
-    pose_2d, visibility, pose_3d = pose_estimator.estimate(image)
+    pose_2d, pose_3d, visibility = pose_estimator.estimate(image)
 
     # close model
     pose_estimator.close()
