@@ -22,11 +22,8 @@ def main():
     dir_path = dirname(realpath(__file__))
     project_path = realpath(dir_path + '/..')
 
-    print(project_path)
-
     image_file_path = project_path + '/data/images/test_image.png'
-    image = cv2.imread(image_file_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # conversion to rgb
+    image = read_rgb_image_file(image_file_path)
 
     # create pose estimator
     saved_sessions_dir = project_path + '/data/saved_sessions'
@@ -49,6 +46,12 @@ def main():
 
     # Show 2D and 3D poses
     display_results(image, pose_2d, visibility, pose_3d)
+
+
+def read_rgb_image_file(image_file_path):
+    image = cv2.imread(image_file_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # conversion to rgb
+    return image
 
 
 def display_results(in_image, data_2d, joint_visibility, data_3d):

@@ -20,7 +20,7 @@ pip install scikit-image
 
 echo 'Compiling external utilities...'
 cd ./dependencies/
-./setup build_ext --inplace
+./upright_fast_setup build_ext --inplace
 rm -rf build
 cd ..
 

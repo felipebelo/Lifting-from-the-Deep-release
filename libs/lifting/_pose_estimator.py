@@ -48,26 +48,34 @@ class PoseEstimator(PoseEstimatorInterface):
 
         self.config = config
         self.session_path = session_path
+        self.prob_model_path = prob_model_path
 
-        original_image_size = np.array(image_size)
+        original_image_height, original_image_width = (
+            self.get_height_and_width(image_size))
 
-        original_image_height = original_image_size[0]
-        original_image_width = original_image_size[1]
-
-        self.scale = self.config.INPUT_SIZE / float(original_image_height)
+        self.scale = self.compute_scale(original_image_height)
         self.image_width = int(self.scale * original_image_width)
 
         self.session = None
-        self.pose_lifting = utils.Prob3dPose(prob_model_path)
-        self.sess = -1
 
         self.image_in = None
         self.heatmap_person_large = None
         self.pose_image_in = None
         self.pose_centermap_in = None
         self.heatmap_pose = None
+
         self.initialised = False
         self.process = Process(config)
+
+    def compute_scale(self, original_image_height):
+        return self.config.INPUT_SIZE / float(original_image_height)
+
+    @staticmethod
+    def get_height_and_width(image_size):
+        original_image_size = np.array(image_size)
+        original_image_height = original_image_size[0]
+        original_image_width = original_image_size[1]
+        return original_image_height, original_image_width
 
     def initialise(self):
         """
@@ -153,11 +161,11 @@ class PoseEstimator(PoseEstimatorInterface):
 
         # Estimate 2D poses
         pose_2d_raw, visibility = self._estimate_2d(hmap_pose, centers)
-        pose_2d = self._prepare_pose_2d(pose_2d_raw)
 
         # Estimate 3D poses
         pose_3d = self._estimate_3d(pose_2d_raw, visibility)
 
+        pose_2d = self._prepare_pose_2d(pose_2d_raw)
         return pose_2d, pose_3d, visibility
 
     def _resize_image(self, image):
@@ -165,11 +173,6 @@ class PoseEstimator(PoseEstimatorInterface):
                           None,
                           fx=self.scale, fy=self.scale,
                           interpolation=cv2.INTER_CUBIC)
-
-    def _prepare_pose_2d(self, pose_2d_raw):
-        pose_2d_normalised = np.round(pose_2d_raw / self.scale)  # Normalise
-        pose_2d = pose_2d_normalised.astype(np.int32)  # Convert type
-        return pose_2d
 
     @staticmethod
     def _prepare_b_image(image):
@@ -180,6 +183,15 @@ class PoseEstimator(PoseEstimatorInterface):
             normalised_image - 0.5,
             dtype=np.float32
         )
+
+    def _compute_centers(self, b_image):
+        hmap_person = self.session.run(
+            self.heatmap_person_large,
+            {self.image_in: b_image}
+        )
+        hmap_person = np.squeeze(hmap_person)
+        centers = self.process.detect_objects_heatmap(hmap_person)
+        return centers
 
     def _compute_hmap_pose(self, image, b_image, centers):
         image_width = image.shape[1]
@@ -197,14 +209,10 @@ class PoseEstimator(PoseEstimatorInterface):
         hmap_pose = self.session.run(self.heatmap_pose, feed_dict)
         return hmap_pose
 
-    def _compute_centers(self, b_image):
-        hmap_person = self.session.run(
-            self.heatmap_person_large,
-            {self.image_in: b_image}
-        )
-        hmap_person = np.squeeze(hmap_person)
-        centers = self.process.detect_objects_heatmap(hmap_person)
-        return centers
+    def _prepare_pose_2d(self, pose_2d_raw):
+        pose_2d_normalised = np.round(pose_2d_raw / self.scale)  # Normalise
+        pose_2d = pose_2d_normalised.astype(np.int32)  # Convert type
+        return pose_2d
 
     def _estimate_2d(self, hmap_pose, centers):
         pose_2d_raw, visibility = (
@@ -219,11 +227,13 @@ class PoseEstimator(PoseEstimatorInterface):
         return pose_2d_raw, visibility
 
     def _estimate_3d(self, pose_2d_raw, visibility):
+        pose_lifting = utils.Prob3dPose(self.prob_model_path)
+
         transformed_pose2d, weights = (
-            self.pose_lifting.transform_joints(
+            pose_lifting.transform_joints(
                 pose_2d_raw.copy(), visibility)
         )
-        pose_3d = self.pose_lifting.compute_3d(transformed_pose2d, weights)
+        pose_3d = pose_lifting.compute_3d(transformed_pose2d, weights)
         return pose_3d
 
     def close(self):
