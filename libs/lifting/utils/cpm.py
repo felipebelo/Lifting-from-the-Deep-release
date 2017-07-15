@@ -629,75 +629,96 @@ INFERENCE_POSE_LAYERS_DESCRIPTION = [
 
 
 def inference_person(image):
+    layers_description = INFERENCE_PERSON_LAYERS_DESCRIPTION
+
     with tf.variable_scope('PersonNet'):
+        layers_map = (
+            _prepare_network(image, layers_description, {}))
 
-        image = image
-
-        layers_map = {'image': image}
-
-        previous_layer = image
-        for description in INFERENCE_PERSON_LAYERS_DESCRIPTION:
-            _prepare_layer(layers_map, description, previous_layer)
-            previous_layer = layers_map[description['key']]
-
-    return layers_map['Mconv7_stage4']
+    return _get_last_layer(layers_description, layers_map)
 
 
 def inference_pose(image, center_map):
+    layers_description = INFERENCE_POSE_LAYERS_DESCRIPTION
+
     with tf.variable_scope('PoseNet'):
-        pool_center_lower = layers.avg_pool2d(center_map, 9, 8, padding='SAME')
 
-        layers_map = {
-            'image': image,
-            'pool_center_lower': pool_center_lower
-        }
+        initial_layers_map = {
+            'pool_center_lower': layers.avg_pool2d(
+                center_map, 9, 8, padding='SAME')}
 
-        previous_layer = image
-        for description in INFERENCE_POSE_LAYERS_DESCRIPTION:
-            _prepare_layer(layers_map, description, previous_layer)
-            previous_layer = layers_map[description['key']]
+        layers_map = (
+            _prepare_network(
+                image, layers_description,
+                initial_layers_map))
 
-    return layers_map['Mconv7_stage6']
+    return _get_last_layer(layers_description, layers_map)
+
+
+def _prepare_network(inputs, layers_description, layers_map):
+    previous_layer = inputs
+    for description in layers_description:
+        _prepare_layer(layers_map, description, previous_layer)
+        previous_layer = layers_map[description['key']]
+
+    return layers_map
+
+
+def _get_last_layer(layers_description, layers_map):
+    last_layer_description = layers_description[-1]
+    last_layer_key = last_layer_description['key']
+    last_layer = layers_map[last_layer_key]
+    return last_layer
 
 
 def _prepare_layer(layers_map, description, previous_layer):
     layer_type = description['type']
 
     if layer_type == 'conv':
-        scope = description['key']
-        vals = description['vals']
-        rectified = description['rectified']
-        layers_map[scope] = _prepare_conv_2d(
-            previous_layer, scope, vals, rectified=rectified)
+        prepare_conv_layer(description, layers_map, previous_layer)
 
     if layer_type == 'pool_stage':
-        scope = description['key']
-        vals = description['vals']
-        layers_map[scope] = _prepare_pool_stage(previous_layer, vals)
+        prepare_pool_state_layer(description, layers_map, previous_layer)
 
     if layer_type == 'concat':
-        scope = description['key']
-        vals = description['vals']
-        layer_keys = description['layers']
-        layers_list = [layers_map[key] for key in layer_keys]
-
-        layers_map[scope] = _tf_concat(layers_list, vals)
+        prepare_concat_layer(description, layers_map)
 
 
-def _tf_concat(layers_list, vals):
-    print("============")
+def prepare_concat_layer(description, layers_map):
+    scope = description['key']
+    vals = description['vals']
+    layer_keys = description['layers']
+    layers_list = [layers_map[key] for key in layer_keys]
+    layers_map[scope] = tf_concat(layers_list, vals)
+
+
+def prepare_pool_state_layer(description, layers_map, previous_layer):
+    scope = description['key']
+    vals = description['vals']
+    layers_map[scope] = tf_pool_stage(previous_layer, vals)
+
+
+def prepare_conv_layer(description, layers_map, previous_layer):
+    scope = description['key']
+    vals = description['vals']
+    rectified = description['rectified']
+    layers_map[scope] = tf_conv_2d(
+        previous_layer, scope, vals, rectified=rectified)
+
+
+def tf_concat(layers_list, vals):
     for layer in layers_list:
         print(layer)
     concat = tf.concat(layers_list, vals[0])
     return concat
 
 
-def _prepare_pool_stage(conv1_2, vals):
+def tf_pool_stage(conv1_2, vals):
     pool_stage = layers.max_pool2d(conv1_2, vals[0], vals[1])
     return pool_stage
 
 
-def _prepare_conv_2d(previous_layer, scope, vals, rectified=True):
+def tf_conv_2d(previous_layer, scope, vals, rectified=True):
     conv = layers.conv2d(
         previous_layer,
         vals[0], vals[1], vals[2],

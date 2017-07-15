@@ -144,10 +144,14 @@ class PoseEstimator(PoseEstimatorInterface):
 
         OUTPUT:
             pose_2d: 2D pose for each of the people in the image in the format
-            (num_ppl x num_joints x 2) visibility: vector containing a bool
+            (num_ppl x num_joints x 2)
+
+            visibility: vector containing a bool
             value for each joint representing the visibility of the joint in
             the image (could be due to occlusions or the joint is not in the
-            image) pose_3d: 3D pose for each of the people in the image in the
+            image)
+
+            pose_3d: 3D pose for each of the people in the image in the
             format (num_ppl x 3 x num_joints)
         """
         if not self.initialised:
