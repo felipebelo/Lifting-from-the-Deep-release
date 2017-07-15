@@ -707,7 +707,6 @@ def prepare_conv_layer(description, layers_map, previous_layer):
 
 
 def tf_concat(layers_list, vals):
-    for layer in layers_list:
     concat = tf.concat(layers_list, vals[0])
     return concat
 
