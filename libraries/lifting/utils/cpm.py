@@ -707,8 +707,6 @@ def prepare_conv_layer(description, layers_map, previous_layer):
 
 
 def tf_concat(layers_list, vals):
-    for layer in layers_list:
-        print(layer)
     concat = tf.concat(layers_list, vals[0])
     return concat
 
@@ -723,6 +721,6 @@ def tf_conv_2d(previous_layer, scope, vals, rectified=True):
         previous_layer,
         vals[0], vals[1], vals[2],
         activation_fn=None, scope=scope)
-    if(rectified):
+    if rectified:
         conv = tf.nn.relu(conv)
     return conv
